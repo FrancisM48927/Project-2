@@ -109,7 +109,7 @@ int main(void)
             LED_PORT->ODR = LED_PATTERN;
 
             // Temporarily adding delay
-            Delay_Count(200000);
+            Delay_Count(100000);
         }
 
         else if (state == SHIFT_RIGHT)
@@ -119,7 +119,7 @@ int main(void)
             LED_PORT->ODR = LED_PATTERN;
 
             // Temporarily adding delay
-            Delay_Count(200000);
+            Delay_Count(100000);
         }
 
         // Delay based on potentiometer
