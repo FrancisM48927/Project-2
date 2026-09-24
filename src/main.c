@@ -158,4 +158,5 @@ int main(void)
             Delay_ms(DELAY_MS);
         }
     }
+    return(0);
 }
