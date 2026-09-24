@@ -5,21 +5,28 @@
 **********************************************************************/
 #include "stm32f4xx.h"
 
+#define ANALOG_PORT GPIOC
 #define SWITCH_PORT GPIOC
 #define LED_PORT GPIOD
-#define ANALOG_PIN 2
 #define SHIFT_LEFT 0
 #define PAUSE 1
 #define SHIFT_RIGHT 2
 
 uint8_t state = PAUSE;
 uint8_t LED_PATTERN = 0x00;
+volatile uint16_t POT_VALUE = 0;
+uint32_t DELAY_MS = 0;
 
 void Delay_Count(volatile uint32_t count) 
 {
     while (count--) 
     {
     }
+}
+
+void Delay_ms(uint32_t ms)
+{
+    Delay_Count(ms * 1000);
 }
 
 void EXTI9_5_IRQHandler(void)
@@ -46,13 +53,29 @@ void EXTI9_5_IRQHandler(void)
     }
 }
 
+uint16_t ADC_Read(void)
+{
+    // Start the conversion
+    ADC1->CR2 |= (1 << 30);
+
+    // Wait for conversion to complete
+    while (!(ADC1->SR & (1 << 1)))
+    {
+    }
+
+    // Return the ADC result
+    return ADC1->DR;
+}
+
 int main(void) 
 {
     // Enable clock for GPIOC, GPIOD, GPIOE, and GPIOF
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN | 
                     RCC_AHB1ENR_GPIODEN |
                     RCC_AHB1ENR_GPIOEEN |
-                    RCC_AHB1ENR_GPIOFEN;        
+                    RCC_AHB1ENR_GPIOFEN;
+    // Enable ADC1 clock
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
 
     // Configure GPIO pins PD0-PD7 (LEDs) as output
     LED_PORT->MODER &= ~(0xFFFF);
@@ -62,6 +85,15 @@ int main(void)
     // Configure GPIO pins PF8-9 & PE6 (Buttons) as inputs
     GPIOE->MODER &= ~(3 << (6 * 2));
     GPIOF->MODER &= ~((3 << (8 * 2)) | (3 << (9 * 2)));
+    // Configure GPIO pin PC2 (Potentiometer) as analog
+    ANALOG_PORT->MODER &= ~(3 << (2 * 2));
+    ANALOG_PORT->MODER |= (3 << (2 * 2));
+
+    // Configure ADC1 for 12-bit, set to single conversion, read channel 12, and turn on ADC1
+    ADC1->CR1 &= ~(3 << 24);
+    ADC1->CR2 &= ~(1 << 1);
+    ADC1->SQR3 = 12;
+    ADC1->CR2 |= (1 << 0);
 
     // Configure GPIO for all buttons to pull-up
     // Pressing the button creates a falling edge
@@ -92,6 +124,10 @@ int main(void)
 
     while(1) 
     {
+        // Read potentiometer value and set it as delay value
+        POT_VALUE = ADC_Read();
+        DELAY_MS = POT_VALUE;
+
         if (state == PAUSE)
         {
             // Turn off any LEDs that should not be on
@@ -108,8 +144,8 @@ int main(void)
             LED_PATTERN = (LED_PATTERN << 1) | (LED_PATTERN >> 7);
             LED_PORT->ODR = LED_PATTERN;
 
-            // Temporarily adding delay
-            Delay_Count(100000);
+            // Delay based on potentiometer
+            Delay_ms(DELAY_MS);
         }
 
         else if (state == SHIFT_RIGHT)
@@ -118,10 +154,8 @@ int main(void)
             LED_PATTERN = (LED_PATTERN >> 1) | (LED_PATTERN << 7);
             LED_PORT->ODR = LED_PATTERN;
 
-            // Temporarily adding delay
-            Delay_Count(100000);
+            // Delay based on potentiometer
+            Delay_ms(DELAY_MS);
         }
-
-        // Delay based on potentiometer
     }
 }
