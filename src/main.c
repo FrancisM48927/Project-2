@@ -12,9 +12,9 @@
 #define PAUSE 1
 #define SHIFT_RIGHT 2
 
-uint8_t state = PAUSE;
-uint8_t LED_PATTERN = 0x00;
+volatile uint8_t state = PAUSE;
 volatile uint16_t POT_VALUE = 0;
+uint8_t LED_PATTERN = 0x00;
 uint32_t DELAY_MS = 0;
 
 void Delay_Count(volatile uint32_t count) 
